@@ -1,4 +1,5 @@
 using Nemerle.IO;
+using Nemerle.Utility;
 
 enum Verdict {
   | OK = 0
@@ -24,6 +25,13 @@ def cfg = Config (
   Interrupt = false,
 );*/
 def cfg = Config ("!test.ini");
+def RunProgram = {
+  def args = System.Environment.GetCommandLineArgs ();
+  if (args.Length <= 1)
+    [cfg.RunProgram]
+  else
+    args.ToList ().Tail
+}
 Nemerle.IO.print ($"$cfg\n");
 
 def GetTest (i : int) {
@@ -73,7 +81,7 @@ def run (t) {
 tests.Iter (fun ((i, o)) {
   System.IO.File.Copy (i, cfg.InputFile.UnSome (), true);
   using (t = ReuseTask (
-    exec = /*"/usr/bin/java" ::*/ [cfg.RunProgram],
+    exec = RunProgram,
     stdin = "/dev/stdin",
     stdout = "/dev/stdout",
     stderr = "/dev/stderr",
