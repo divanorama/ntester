@@ -3,6 +3,7 @@ using Reuse;
 class ReuseTask : System.IDisposable {
   private obj : System.IntPtr;
   private TL : option[int];
+  private Exec : list[string];
   private static Error (str : string = "ahtung") : void {
     throw System.Exception (str)
   }
@@ -12,6 +13,7 @@ class ReuseTask : System.IDisposable {
   }
   public this (exec : list[string], stdin : string, stdout : string, stderr : string, tl : option[int], mem : int = 0) {
     TL = tl;
+    Exec = exec;
     obj = Reuse.task_New ();
     Assert (obj != System.IntPtr.Zero);
     match (tl) {
@@ -34,7 +36,7 @@ class ReuseTask : System.IDisposable {
     }
   }
   public Start () : void {
-    Assert (obj.task_Start () == 0);
+    Assert (obj.task_Start () == 0, $"..$Exec");
   }
   public Wait () : void {
     Assert (obj.task_Wait () != System.IntPtr.Zero)
