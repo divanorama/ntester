@@ -1,0 +1,87 @@
+using Nemerle.Utility;
+
+[Record]
+class Config {
+  public RunProgram : string;
+  public TestInput : string * int * string;
+  public TestAnswer : string * int * string;
+  public TestNumber : option[int] = None ();
+  public TimeLimit : option[int] = None ();
+  public MemoryLimit : option[int] = None ();
+  public Checker : CheckerType;
+  public GenAnswers : bool;
+  public InputFile : option[string] = None ();
+  public OutputFile : option[string] = None ();
+  public Interrupt : bool;
+  public override ToString () : string {
+    $"RunProgram = $RunProgram\n"
+     "TestInput = $TestInput\n"
+     "TestAnswer = $TestAnswer\n"
+     "TestNumber = $TestNumber\n"
+     "TimeLimit = $TimeLimit\n"
+     "MemoryLimit = $MemoryLimit\n"
+     "Checker = $Checker\n"
+     "GenAnswers = $GenAnswers\n"
+     "InputFile = $InputFile\n"
+     "OutputFile = $OutputFile\n"
+     "Interrupt = $Interrupt\n"
+  }
+  public this (file : string) {
+    this (System.IO.File.ReadAllLines (file).MapToList (x => x))
+  }
+  public this (cfg : list[string]) {
+    def cfg = cfg.Filter (s => !s.StartsWith (";"));
+    def cfg = cfg.Filter (s => s.IndexOf ('=') >= 0);
+    def cfg = cfg.Map (fun (s) {
+      def i = s.IndexOf ('=');
+      def k = s.Substring (0, i).Trim ();
+      def v = s.Substring (i + 1).Trim ();
+      (k, v)
+    });
+    def zer (s) {
+      def i = s.LastIndexOf ("00");
+      assert (i >= 0);
+      def (i, l) = if (i > 0 && s[i - 1] == '0') (i - 1, 3) else (i, 2);
+      (s.Substring (0, i), l, s.Substring (i + l))
+    }
+    def loop (cfg) {
+    | [] => ()
+    | (k, v) :: tail =>
+      match (k) {
+        | "RunProgram" => RunProgram = v;
+        | "TestInput" => TestInput = zer (v)
+        | "TestAnswer" => TestAnswer = zer (v)
+        | "TestNumber" =>
+          unless (v == "Auto")
+            TestNumber = Some (int.Parse (v))
+        | "TimeLimit" =>
+          unless (v == "No")
+            TimeLimit = Some (int.Parse (v))
+        | "MemoryLimit" =>
+          unless (v == "No")
+            MemoryLimit = Some (System.Convert.ToInt32 (System.Math.Ceiling (double.Parse (v))))
+        | "Checker" =>
+          Checker = match (v) {
+            | "#token" => CheckerType.Token ()
+            | "#char" => CheckerType.Char ()
+            | f when f.StartsWith ("#float ") => CheckerType.Float (int.Parse (f.Substring ("#float ".Length)))
+            | f => CheckerType.External (f)
+          }
+        | "InputFile" =>
+          unless (v == "#stdin")
+            InputFile = Some (v)
+        | "OutputFile" =>
+          unless (v == "#stdout")
+            OutputFile = Some (v)
+        | s => Nemerle.IO.print ($"preved $k -> $v\n")
+//HideCheckerOutput  = No
+//HideProgramOutput  = No
+//GenAnswers         = Auto
+//Interrupt          = No
+//Pause              = No
+      }
+      loop (tail)
+    }
+    loop (cfg)
+  }
+}

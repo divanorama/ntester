@@ -1,0 +1,105 @@
+using Nemerle.IO;
+
+enum Verdict {
+  | OK = 0
+  | WA = 1
+  | PE = 2
+  | CF
+  | RE
+  | TL
+  | ML
+}
+/*
+def cfg = Config (
+  RunProgram = "a.out",
+  TestInput = ("prefix/tests/", "00".Length, ""),
+  TestAnswer = ("prefix/tests/", "00".Length, ".ans"),
+  TestNumber = None (),
+  TimeLimit = Some (3),
+  MemoryLimit = Some (64),
+  Checker = CheckerType.External ("prefix/check"),
+  GenAnswers = false,
+  InputFile = Some ("input.txt"),
+  OutputFile = Some ("output.txt"),
+  Interrupt = false,
+);*/
+def cfg = Config ("!test.ini");
+Nemerle.IO.print ($"$cfg\n");
+
+def GetTest (i : int) {
+  def num (p) {
+    if (p.Length >= cfg.TestInput[1])
+      p
+    else
+      num ("0" + p)
+  }
+  def p = num ($"$i");
+  def i = cfg.TestInput[0] + p + cfg.TestInput[2];
+  def o = cfg.TestAnswer[0] + p + cfg.TestAnswer[2];
+  if (System.IO.File.Exists (i))
+    Some ((i, o))
+  else
+    None ()
+}
+
+def GetTests (s = 1, acc = []) {
+  match (GetTest (s)) {
+    | None => acc.Rev ()
+    | Some (t) => GetTests (s + 1, t :: acc)
+  }
+}
+
+def tests = GetTests ();
+
+def run (t) {
+  t.Start ();
+  t.Wait ();
+  def mem = 0;
+  def tim = t.Time * 0.001;
+  def rtim = t.RealTime * 0.001;
+  def rn = (mem, rtim, tim);
+  def v = 
+    if (t.IsTimeout)
+      Verdict.TL
+    else if (t.IsMemoryLimit)
+      Verdict.ML
+    else if (t.IsAbnormal)
+      Verdict.RE
+    else
+      Verdict.OK;
+  (v, rn)
+}
+
+tests.Iter (fun ((i, o)) {
+  System.IO.File.Copy (i, cfg.InputFile.UnSome (), true);
+  using (t = ReuseTask (
+    exec = /*"/usr/bin/java" ::*/ [cfg.RunProgram],
+    stdin = "/dev/stdin",
+    stdout = "/dev/stdout",
+    stderr = "/dev/stderr",
+    mem = cfg.MemoryLimit.UnSome (),
+    tl = cfg.TimeLimit,
+  )) {
+    System.IO.File.Delete (cfg.OutputFile.UnSome ());
+    def (v, rn) = run (t);
+    def (mem, rtim, tim) = rn;
+    def v = if (v != Verdict.OK) v else {
+      if (!System.IO.File.Exists (cfg.OutputFile.UnSome ()))
+        Verdict.PE
+      else if (!System.IO.File.Exists (o))
+        assert (false)
+      else 
+        cfg.Checker.Check (inf = i, ja = o, pa = cfg.OutputFile.UnSome ())
+    }
+    print ($"$i: ");
+    System.Console.ForegroundColor = match (v : Verdict) {
+      | OK => System.ConsoleColor.Green
+      | WA => System.ConsoleColor.Red
+      | TL => System.ConsoleColor.Blue
+      | _ => System.ConsoleColor.Yellow
+    }
+    print ($"$v");
+    System.Console.ResetColor ();
+    print ($" $(mem)mb $(rtim)s $(tim)s\n");
+  }
+});

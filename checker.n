@@ -1,0 +1,73 @@
+variant CheckerType {
+  | Token
+  | Char
+  | Float { digits : int }
+  | External { path : string }
+  public Check (inf : string, ja : string, pa : string) : Verdict {
+    match (this) {
+      | Char =>
+        def ja = System.IO.File.ReadAllBytes (ja);
+        def pa = System.IO.File.ReadAllBytes (pa);
+        if (pa.Length == ja.Length && $[0 .. ja.Length - 1].Filter (i => ja[i] != pa[i]).Length == 0)
+          Verdict.OK
+        else
+          Verdict.WA
+      | Token =>
+        def nxt (inp) {
+          try {
+            Some (Nemerle.IO.fscanf (inp, "%s"))
+          } catch {
+            | _ => None ()
+          }
+        }
+        using (ja = System.IO.File.OpenText (ja)) {
+          using (pa = System.IO.File.OpenText (pa)) {
+            def loop () {
+              match (nxt (ja)) {
+                | None => nxt (pa).IsNone
+                | Some (t) =>
+                  assert (t.Length > 0);
+                  match (nxt (pa)) {
+                    | None
+                    | Some (pt) when pt != t =>
+                      false 
+                    | Some (pt) =>
+                      assert (pt.Length > 0);
+                      loop ()
+                  }
+              }
+            }
+            if (loop ()) Verdict.OK else Verdict.WA
+          }
+        }
+      | Float (digits) =>
+        def ja = System.IO.File.ReadAllText (ja);
+        def pa = System.IO.File.ReadAllText (pa);
+        def ja = System.Double.Parse (ja);
+        try {
+          def pa = System.Double.Parse (pa);
+          def ok = System.Math.Abs (ja - pa) <= System.Math.Pow (0.1, digits);
+          if (ok)
+            Verdict.OK
+          else
+            Verdict.WA
+        } catch {
+          | _ => Verdict.PE
+        }
+      | External (check) =>
+        using (t = ReuseTask (
+          exec = check :: inf :: pa :: ja :: [],
+          stdin = "/dev/null",
+          stdout = "/dev/null",
+          stderr = "/dev/null",
+          mem = 100,
+          tl = Some (3),
+        )) {
+          t.Start ();
+          t.Wait ();
+          t.ExitCode :> Verdict
+        }
+    }
+  }
+}
+

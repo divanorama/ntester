@@ -1,0 +1,210 @@
+using System.Runtime.InteropServices;
+
+enum TaskStatus {
+  | ERROR = 0                   /* error occured */
+  | STOPPED = 1                 /* task is not started */
+  | RUNNING = 2                 /* task is runnning */
+  | EXITED = 3                  /* task has exited */
+  | SIGNALED = 4                /* task was terminated by a signal */
+}
+enum Fd {
+  | Stdin = 0
+  | Stdout = 1
+  | Stderr = 2
+}
+enum FdOp { 
+  | CLOSE = 0                /* close file descriptor */
+  | FILE = 1                 /* redirect to/from file */
+  | DUP = 2                  /* duplicate file descriptor */
+  | PIPE = 3                 /* pipe the file descriptor */
+};
+enum FileOpenFlags {
+  | REWRITE = 0x10000
+  | WRITE   = 0x20000
+  | READ    = 0x30000
+}
+enum FileOpenModes {
+  | FULL_RW = 0o666
+}
+enum PipeMode {
+  | READ = 0
+  | WRITE = 1
+}
+
+module Reuse {
+
+  [DllImport ("reuse")]
+  [return: MarshalAs (UnmanagedType.LPStruct)]
+  public extern task_New () : System.IntPtr;
+
+  [DllImport ("reuse")]
+  public extern task_Delete (
+    [MarshalAs (UnmanagedType.LPStruct)] o : System.IntPtr
+  ) : void;
+
+  [DllImport ("reuse")]
+  public extern task_SetPath (
+    [MarshalAs (UnmanagedType.LPStruct)] this o : System.IntPtr,
+    [MarshalAs (UnmanagedType.LPStr)] s : string
+  ) : int;
+
+  [DllImport ("reuse")]
+  public extern task_SetMaxTimeMillis (
+    [MarshalAs (UnmanagedType.LPStruct)]
+    this o : System.IntPtr,
+    ms : int
+  ) : int;
+
+  [DllImport ("reuse")]
+  public extern task_SetMaxTime (
+    [MarshalAs (UnmanagedType.LPStruct)]
+    this o : System.IntPtr,
+    s : int
+  ) : int;
+
+  [DllImport ("reuse")]
+  public extern task_SetMaxRealTime (
+    [MarshalAs (UnmanagedType.LPStruct)]
+    this o : System.IntPtr,
+    s : int
+  ) : int;
+
+  [DllImport ("reuse")]
+  public extern task_Start (
+    [MarshalAs (UnmanagedType.LPStruct)]
+    this o : System.IntPtr
+  ) : int;
+
+  [DllImport ("reuse")]
+  public extern task_GetRunningTime (
+    [MarshalAs (UnmanagedType.LPStruct)]
+    this o : System.IntPtr
+  ) : int;
+
+  [DllImport ("reuse")]
+  public extern task_GetRealTime (
+    [MarshalAs (UnmanagedType.LPStruct)]
+    this o : System.IntPtr
+  ) : int;
+
+  [DllImport ("reuse")]
+  [return: MarshalAs (UnmanagedType.LPStruct)]
+  public extern task_Wait (
+    [MarshalAs (UnmanagedType.LPStruct)]
+    this o : System.IntPtr
+  ) : System.IntPtr;
+
+  [DllImport ("reuse")]
+  public extern task_Status (
+    [MarshalAs (UnmanagedType.LPStruct)]
+    this o : System.IntPtr
+  ) : int;
+
+  [DllImport ("reuse")]
+  public extern task_ExitCode (
+    [MarshalAs (UnmanagedType.LPStruct)] 
+    this o : System.IntPtr
+  ) : int;
+
+  [DllImport ("reuse")]
+  public extern task_AddArg (
+    [MarshalAs (UnmanagedType.LPStruct)]
+    this o : System.IntPtr, 
+    [MarshalAs (UnmanagedType.LPStr)]
+    ms : string
+  ) : int;
+
+  [DllImport ("reuse", EntryPoint = "task_SetRedir")]
+  private extern task_SetRedirFile (
+    [MarshalAs (UnmanagedType.LPStruct)]
+    o : System.IntPtr, 
+    [MarshalAs (UnmanagedType.I4)]
+    fd : Fd,
+    [MarshalAs (UnmanagedType.I4)]
+    fdop_file : FdOp,
+    [MarshalAs (UnmanagedType.LPStr)]
+    fn : string,
+    [MarshalAs (UnmanagedType.I4)]
+    fdop_flag : FileOpenFlags,
+    [MarshalAs (UnmanagedType.I4)]
+    fdop_mode : FileOpenModes,
+  ) : int;
+
+  public task_SetRedirFile (this o : System.IntPtr, fd : Fd, fn : string, fdop_flag : FileOpenFlags, fdop_mode : FileOpenModes = FileOpenModes.FULL_RW) : int {
+    task_SetRedirFile (o, fd, FdOp.FILE, fn, fdop_flag, fdop_mode)
+  }
+
+  [DllImport ("reuse", EntryPoint = "task_SetRedir")]
+  private extern task_SetRedirClose (
+    [MarshalAs (UnmanagedType.LPStruct)]   o  : System.IntPtr, 
+    [MarshalAs (UnmanagedType.I4)]        fd  : Fd,
+    [MarshalAs (UnmanagedType.I4)] fdop_close : FdOp,
+  ) : void;
+
+  public task_SetRedirClose (this o : System.IntPtr, fd : Fd) : void {
+    task_SetRedirClose (o, fd, FdOp.CLOSE)
+  }
+
+  [DllImport ("reuse", EntryPoint = "task_SetRedir")]
+  private extern task_SetRedirDup (
+    [MarshalAs (UnmanagedType.LPStruct)]   o : System.IntPtr, 
+    [MarshalAs (UnmanagedType.I4)]        fd : Fd,
+    [MarshalAs (UnmanagedType.I4)]  fdop_dup : FdOp,
+    [MarshalAs (UnmanagedType.I4)]       fd2 : Fd,
+  ) : void;
+
+  public task_SetRedirDup (this o : System.IntPtr, fd : Fd, fd2 : Fd) : void {
+    task_SetRedirDup (o, fd, FdOp.DUP, fd2)
+  }
+
+  [DllImport ("reuse", EntryPoint = "task_SetRedir")]
+  private extern task_SetRedirPipe (
+    [MarshalAs (UnmanagedType.LPStruct)]   o : System.IntPtr, 
+    [MarshalAs (UnmanagedType.I4)]        fd : Fd,
+    [MarshalAs (UnmanagedType.I4)] fdop_pipe : FdOp,
+    [MarshalAs (UnmanagedType.I4)]        pm : PipeMode,
+  ) : void;
+
+  public task_RedirPipe (this o : System.IntPtr, fd : Fd, pm : PipeMode) : void {
+    task_SetRedirPipe (o, fd, FdOp.PIPE, pm)
+  }
+
+  [DllImport ("reuse")]
+  public extern task_SetStackSize (
+    [MarshalAs (UnmanagedType.LPStruct)] this o : System.IntPtr, 
+    size : int
+  ) : int;
+
+  [DllImport ("reuse")]
+  public extern task_SetDataSize (
+    [MarshalAs (UnmanagedType.LPStruct)] this o : System.IntPtr, 
+    size : int
+  ) : int;
+
+  [DllImport ("reuse")]
+  public extern task_SetVMSize (
+    [MarshalAs (UnmanagedType.LPStruct)] this o : System.IntPtr, 
+    size : int
+  ) : int;
+
+  [DllImport ("reuse")]
+  public extern task_EnableMemoryLimitError (
+    [MarshalAs (UnmanagedType.LPStruct)] this o : System.IntPtr, 
+  ) : int;
+
+  [DllImport ("reuse")]
+  public extern task_IsAbnormal (
+    [MarshalAs (UnmanagedType.LPStruct)] this o : System.IntPtr 
+  ) : int;
+
+  [DllImport ("reuse")]
+  public extern task_IsTimeout (
+    [MarshalAs (UnmanagedType.LPStruct)] this o : System.IntPtr 
+  ) : int;
+
+  [DllImport ("reuse")]
+  public extern task_IsMemoryLimit (
+    [MarshalAs (UnmanagedType.LPStruct)] this o : System.IntPtr 
+  ) : int;
+}
+

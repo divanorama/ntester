@@ -1,0 +1,70 @@
+using Reuse;
+
+class ReuseTask : System.IDisposable {
+  private obj : System.IntPtr;
+  private TL : option[int];
+  private static Error (str : string = "ahtung") : void {
+    throw System.Exception (str)
+  }
+  private static Assert (truth : bool, str : string = "alarm") : void {
+    unless (truth)
+      Error (str)
+  }
+  public this (exec : list[string], stdin : string, stdout : string, stderr : string, tl : option[int], mem : int = 0) {
+    TL = tl;
+    obj = Reuse.task_New ();
+    Assert (obj != System.IntPtr.Zero);
+    match (tl) {
+      | None => ()
+      | Some (tl) =>
+        Assert (obj.task_SetMaxRealTime (tl * 2) == 0);
+        unless (obj.task_SetMaxTimeMillis (tl * 1000) == 0)
+          Assert (obj.task_SetMaxTime (tl) == 0);
+    }
+
+    exec.Iter (x => Assert (obj.task_AddArg (x) == 0));
+    Assert (obj.task_SetRedirFile (Fd.Stdin, stdin, FileOpenFlags.READ) == 0);
+    Assert (obj.task_SetRedirFile (Fd.Stdout, stdout, FileOpenFlags.WRITE) == 0);
+    when (mem > 0) {
+      def mem = mem << 20;
+      _ = obj.task_SetStackSize (mem);
+      Assert (obj.task_SetVMSize (mem) == 0);
+      Assert (obj.task_SetDataSize (mem) == 0);
+      _ = obj.task_EnableMemoryLimitError ();
+    }
+  }
+  public Start () : void {
+    Assert (obj.task_Start () == 0);
+  }
+  public Wait () : void {
+    Assert (obj.task_Wait () != System.IntPtr.Zero)
+  }
+  public ExitCode : int {
+    get { obj.task_ExitCode () }
+  }
+  public Time : int {
+    get { obj.task_GetRunningTime () }
+  }
+  public RealTime : int {
+    get { obj.task_GetRealTime () }
+  }
+  public Status : TaskStatus {
+    get { obj.task_Status () :> TaskStatus }
+  }
+  public IsAbnormal : bool {
+    get { obj.task_IsAbnormal () != 0 }
+  }
+  public IsTimeout : bool {
+    get { obj.task_IsTimeout () != 0 || TL.IsSome && Time > TL.UnSome () * 1000 - 20}
+  }
+  public IsMemoryLimit : bool {
+    get { obj.task_IsMemoryLimit () != 0 }
+  }
+  public IsOk : bool {
+    get { !IsAbnormal && !IsTimeout && !IsMemoryLimit }
+  }
+  private Dispose () : void implements System.IDisposable.Dispose {
+    task_Delete (obj);
+  }
+}
+
