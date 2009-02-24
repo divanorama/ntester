@@ -60,7 +60,7 @@ variant CheckerType {
           stdin = "/dev/null",
           stdout = "/dev/null",
           stderr = "/dev/null",
-          mem = 100,
+          mem = None (),
           tl = Some (3),
         )) {
           t.Start ();

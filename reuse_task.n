@@ -11,7 +11,7 @@ class ReuseTask : System.IDisposable {
     unless (truth)
       Error (str)
   }
-  public this (exec : list[string], stdin : string, stdout : string, stderr : string, tl : option[int], mem : int = 0) {
+  public this (exec : list[string], stdin : string, stdout : string, stderr : string, tl : option[int], mem : option[int]) {
     TL = tl;
     Exec = exec;
     obj = Reuse.task_New ();
@@ -27,12 +27,14 @@ class ReuseTask : System.IDisposable {
     exec.Iter (x => Assert (obj.task_AddArg (x) == 0));
     Assert (obj.task_SetRedirFile (Fd.Stdin, stdin, FileOpenFlags.READ) == 0);
     Assert (obj.task_SetRedirFile (Fd.Stdout, stdout, FileOpenFlags.WRITE) == 0);
-    when (mem > 0) {
-      def mem = mem << 20;
-      _ = obj.task_SetStackSize (mem);
-      Assert (obj.task_SetVMSize (mem) == 0);
-      Assert (obj.task_SetDataSize (mem) == 0);
-      _ = obj.task_EnableMemoryLimitError ();
+    match (mem) {
+      | None => ()
+      | Some (mem) =>
+        def mem = mem << 20;
+        _ = obj.task_SetStackSize (mem);
+        Assert (obj.task_SetVMSize (mem) == 0);
+        Assert (obj.task_SetDataSize (mem) == 0);
+        _ = obj.task_EnableMemoryLimitError ();
     }
   }
   public Start () : void {
