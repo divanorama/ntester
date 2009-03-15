@@ -76,6 +76,8 @@ class Config {
         | "OutputFile" =>
           unless (v == "#stdout")
             OutputFile = Some (v)
+        | "GenAnswers" =>
+          GenAnswers = v == "Auto"
         | s => Nemerle.IO.print ($"preved $k -> $v\n")
 //HideCheckerOutput  = No
 //HideProgramOutput  = No

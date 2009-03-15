@@ -45,7 +45,10 @@ def GetTest (i : int) {
   def i = cfg.TestInput[0] + p + cfg.TestInput[2];
   def o = cfg.TestAnswer[0] + p + cfg.TestAnswer[2];
   if (System.IO.File.Exists (i))
-    Some ((i, o))
+    if (System.IO.File.Exists (o) || cfg.GenAnswers)
+      Some ((i, o))
+    else
+      None ()
   else
     None ()
 }
@@ -94,9 +97,14 @@ tests.Iter (fun ((i, o)) {
     def v = if (v != Verdict.OK) v else {
       if (!System.IO.File.Exists (cfg.OutputFile.UnSome ()))
         Verdict.PE
-      else if (!System.IO.File.Exists (o))
-        assert (false)
-      else 
+      else if (!System.IO.File.Exists (o)) {
+        assert (cfg.GenAnswers);
+        System.IO.File.Copy (cfg.OutputFile.UnSome (), o);
+        def v = cfg.Checker.Check (inf = i, ja = o, pa = cfg.OutputFile.UnSome ());
+        unless (v == Verdict.OK)
+          System.IO.File.Delete (o);
+        v
+      } else 
         cfg.Checker.Check (inf = i, ja = o, pa = cfg.OutputFile.UnSome ())
     }
     print ($"$i: ");
