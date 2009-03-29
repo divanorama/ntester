@@ -55,7 +55,11 @@ def GetTest (i : int) {
 
 def GetTests (s = 1, acc = []) {
   match (GetTest (s)) {
-    | None => acc.Rev ()
+    | None =>
+      when (cfg.TestNumber is Some (_))
+        assert (s == cfg.TestNumber.UnSome ());
+      acc.Rev ()
+    | Some when cfg.TestNumber is Some (_) && cfg.TestNumber.UnSome () < s => acc.Rev ()
     | Some (t) => GetTests (s + 1, t :: acc)
   }
 }
