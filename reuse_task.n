@@ -32,7 +32,7 @@ class ReuseTask : System.IDisposable {
       | Some (mem) =>
         def mem = mem << 20;
         //_ = obj.task_SetStackSize (mem);
-        Assert (obj.task_SetVMSize (mem) == 0);
+        //Assert (obj.task_SetVMSize (mem) == 0);
         Assert (obj.task_SetDataSize (mem) == 0);
         _ = obj.task_EnableMemoryLimitError ();
     }
