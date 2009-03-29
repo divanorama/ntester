@@ -55,13 +55,13 @@ class Config {
         | "TestInput" => TestInput = zer (v)
         | "TestAnswer" => TestAnswer = zer (v)
         | "TestNumber" =>
-          unless (v == "Auto")
+          unless (v.ToLower () == "auto")
             TestNumber = Some (int.Parse (v))
         | "TimeLimit" =>
-          unless (v == "No")
-            TimeLimit = Some (int.Parse (v))
+          unless (v.ToLower () == "no")
+            TimeLimit = Some (double.Parse (v) :> int)
         | "MemoryLimit" =>
-          unless (v == "No")
+          unless (v.ToLower () == "no")
             MemoryLimit = Some (System.Convert.ToInt32 (System.Math.Ceiling (double.Parse (v))))
         | "Checker" =>
           Checker = match (v) {
@@ -77,7 +77,7 @@ class Config {
           unless (v == "#stdout")
             OutputFile = Some (v)
         | "GenAnswers" =>
-          GenAnswers = v == "Auto"
+          GenAnswers = v.ToLower () == "auto"
         | s => Nemerle.IO.print ($"preved $k -> $v\n")
 //HideCheckerOutput  = No
 //HideProgramOutput  = No
