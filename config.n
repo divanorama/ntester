@@ -68,7 +68,7 @@ class Config {
             | "#token" => CheckerType.Token ()
             | "#char" => CheckerType.Char ()
             | f when f.StartsWith ("#float ") => CheckerType.Float (int.Parse (f.Substring ("#float ".Length)))
-            | f => CheckerType.External (f)
+            | f => CheckerType.External (sl (f))
           }
         | "InputFile" =>
           unless (v == "#stdin")
